@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "快递取件码助手",
+    "slug": "cainiao-pickup-assistant",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "cainiao",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.jiuqiagent.cainiao",
+      "versionCode": 1
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "USE_MEMORY_DB": "0"
+    }
+  }
+}

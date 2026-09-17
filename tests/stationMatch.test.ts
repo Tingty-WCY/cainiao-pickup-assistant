@@ -22,6 +22,15 @@ describe('驿站归到预置站点', () => {
     expect(resolveFixedStationId('学院路服务站', '京东')).toBe('station-jd');
   });
 
+  it('驿站名认不出时，用短信签名兜底（品牌常只写在【】里）', () => {
+    // 【近邻宝】凭「9911-9276」到学生公寓西侧10号柜 —— 正文里没有品牌名
+    expect(resolveFixedStationId('学生公寓西侧10号柜', undefined, '近邻宝')).toBe(
+      'station-jinlinbao',
+    );
+    // 驿站名比签名更具体，两者都认得出时以驿站名为准
+    expect(resolveFixedStationId('中央民族大学京东服务站', undefined, '菜鸟驿站')).toBe('station-jd');
+  });
+
   it('都认不出 / 没解析出驿站名 → 一律归菜鸟', () => {
     expect(resolveFixedStationId('中央民族大学丰台校区快递服务中心')).toBe('station-cainiao');
     expect(resolveFixedStationId('学生公寓西侧9号柜X27')).toBe('station-cainiao');

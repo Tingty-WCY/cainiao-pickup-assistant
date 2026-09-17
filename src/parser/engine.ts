@@ -10,6 +10,9 @@ import {
   TAIL_NUMBER_REGEX,
   BOX_NO_REGEX,
   CABINET_REGEX,
+  CABINET_NO_REGEX,
+  LOCKER_SLOT_REGEX,
+  SENDER_TAG_CAPTURE_REGEX,
   PHONE_REGEX,
   PHONE_MASKED_REGEX,
   TRACKING_REGEX,
@@ -69,6 +72,18 @@ export function parseText(rawText: string): ParsedPackage {
     }
   }
 
+  // 2b. 发件方签名（【近邻宝】【菜鸟驿站】…）单独存下来，交给「归到哪个驿站」的判定使用。
+  // 「到 X 取件」结构只看正文，抓不到签名里的品牌：
+  //   【近邻宝】凭「9911-9276」到学生公寓西侧10号柜
+  //   → stationName 只有「学生公寓西侧10号柜」，认不出近邻宝，最后被兜底成「菜鸟」。
+  // 注意：**不要并进 stationName** —— 那是驿站名，保持干净（很多短信的签名和驿站名不一致，
+  // 例如「【邮政驿站】…到中国邮政」，拼起来只会变成噪音）。
+  const senderTag = text.match(SENDER_TAG_CAPTURE_REGEX);
+  if (senderTag) {
+    const tag = senderTag[1].trim();
+    if (tag) result.senderTag = tag;
+  }
+
   // 3. 货架式取件码回退：菜鸟常见「8-2-3056」，只有在取件语境下才认
   if (!result.pickupCode && (result.stationName || /取件|领取|取货/.test(text))) {
     const shelfMatch = text.match(SHELF_CODE_REGEX);
@@ -92,6 +107,17 @@ export function parseText(rawText: string): ParsedPackage {
     }
   } else if (cabinetMatch && cabinetMatch[1] !== result.pickupCode) {
     result.boxNo = cabinetMatch[1];
+  }
+
+  // 4c. 「…10号柜…L18取件」这种把柜体和格口都写出来的（近邻宝常见写法）：
+  //     柜体 = 10号柜、格口 = L18，两个都拼进 boxNo，到柜子前一眼就能找到。
+  if (!result.boxNo) {
+    const cabinetNo = text.match(CABINET_NO_REGEX);
+    const slot = text.match(LOCKER_SLOT_REGEX);
+    const parts: string[] = [];
+    if (cabinetNo) parts.push(`${cabinetNo[1]}号柜`);
+    if (slot && slot[1] !== result.pickupCode) parts.push(slot[1]);
+    if (parts.length) result.boxNo = parts.join(' ');
   }
 
   // 5. 手机号：完整优先，其次脱敏格式（138****1234）

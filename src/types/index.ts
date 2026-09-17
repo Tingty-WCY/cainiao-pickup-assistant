@@ -171,6 +171,12 @@ export interface ParsedPackage {
   /** 柜号/格口号，如「格口号：15」「B柜」里的 15 / B */
   boxNo?: string;
   stationName?: string;
+  /**
+   * 短信发件方签名，如「近邻宝」「菜鸟驿站」「中国邮政」。
+   * 品牌名常常**只出现在这里**（正文只剩「到XX柜取件」），
+   * 所以要单独留着参与「归到哪个驿站」的判定，不能丢掉。
+   */
+  senderTag?: string;
   stationAddress?: string;
   phone?: string;
   /** 脱敏手机号原文，如 138****1234（短信里常见） */

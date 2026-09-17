@@ -19,7 +19,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -28,7 +36,10 @@
       "router": {
         "origin": false
       },
-      "USE_MEMORY_DB": "0"
+      "USE_MEMORY_DB": "0",
+      "eas": {
+        "projectId": "3471f94d-4ae8-4928-8af5-fecd25138169"
+      }
     }
   }
 }

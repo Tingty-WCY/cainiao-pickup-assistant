@@ -89,9 +89,9 @@ export default function ImportScreen() {
     setBox(r.boxNo ?? '');
     if (r.status) setStatus(r.status);
 
-    // 驿站：一律归到 6 个预置驿站之一（先看驿站名，再看快递公司，认不出一律归「菜鸟」）。
+    // 驿站：一律归到 6 个预置驿站之一（驿站名 → 短信签名 → 快递公司，认不出一律归「菜鸟」）。
     // 不再按短信里的驿站名自动建档 —— 那正是驿站表爆炸的原因。
-    setStationId(resolveFixedStationId(r.stationName, r.courierCompany));
+    setStationId(resolveFixedStationId(r.stationName, r.courierCompany, r.senderTag));
   };
 
   const station = stations.find((s) => s.id === stationId);
@@ -106,7 +106,8 @@ export default function ImportScreen() {
     try {
       // 驿站：正常已由 parseWith 归好；兜底再解析一次
       const finalStationId =
-        stationId || resolveFixedStationId(parsed?.stationName, parsed?.courierCompany);
+        stationId ||
+        resolveFixedStationId(parsed?.stationName, parsed?.courierCompany, parsed?.senderTag);
       const input: CreatePackageInput = {
         stationId: finalStationId || undefined,
         source: 'TEXT' as DataSource,

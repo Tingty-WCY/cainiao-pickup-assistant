@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseText } from '../src/parser/engine';
+import { resolveFixedStationId } from '../src/services/stationMatch';
 
 describe('文本解析引擎', () => {
   it('完整物流短信：中通 + 菜鸟驿站 + 取件码 + 待取', () => {
@@ -236,5 +237,19 @@ describe('文本解析引擎', () => {
     expect(r.pickupCode).toBe('8899');
     expect(r.boxNo).toBe('A12');
     expect(r.stationName).not.toContain('丰巢】');
+  });
+
+  it('近邻宝：品牌只在【】签名里也要能归对驿站，柜体与格口都要提取', () => {
+    const r = parseText('【近邻宝】凭「9911-9276」到学生公寓西侧10号柜，五日签收L18取件');
+    expect(r.pickupCode).toBe('9911-9276');
+    // 正文只有「到XX柜取件」，品牌名只在签名里 —— 靠 senderTag 才认得出近邻宝
+    expect(r.stationName).toBe('学生公寓西侧10号柜');
+    expect(r.senderTag).toBe('近邻宝');
+    expect(resolveFixedStationId(r.stationName, r.courierCompany, r.senderTag)).toBe(
+      'station-jinlinbao',
+    );
+    // 柜体（10号柜）和格口（L18）都要有，到柜子前照着找
+    expect(r.boxNo).toBe('10号柜 L18');
+    expect(r.status).toBe('PENDING_PICKUP');
   });
 });

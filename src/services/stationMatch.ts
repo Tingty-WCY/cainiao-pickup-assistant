@@ -42,16 +42,27 @@ function matchBrand(text?: string): string | undefined {
 }
 
 /**
- * 把「驿站名 + 快递公司」归到 6 个预置驿站之一。
+ * 把「驿站名 + 签名 + 快递公司」归到 6 个预置驿站之一。
  *
- * 优先看驿站名（更精确，如「中央民族大学京东服务站」→ 京东）；
- * 驿站名认不出时再看快递公司（如驿站名是「北京市海淀区民大店」、公司是顺丰 → 顺丰）；
- * 都认不出 → DEFAULT_STATION_ID（菜鸟）。
+ * 判定顺序（越靠前越具体）：
+ *  1. 驿站名 —— 如「到中央民族大学京东服务站取件」→ 京东
+ *  2. 短信签名 —— 品牌往往只写在【】里，正文只剩「到XX柜取件」，如【近邻宝】→ 近邻宝
+ *  3. 快递公司 —— 如驿站名是「北京市海淀区民大店」、公司是顺丰 → 顺丰
+ *  4. 都认不出 → DEFAULT_STATION_ID（菜鸟）
  *
  * 这样就不会再每来一条短信就新建一个驿站了。
  */
-export function resolveFixedStationId(stationName?: string, courierCompany?: string): string {
-  return matchBrand(stationName) ?? matchBrand(courierCompany) ?? DEFAULT_STATION_ID;
+export function resolveFixedStationId(
+  stationName?: string,
+  courierCompany?: string,
+  senderTag?: string,
+): string {
+  return (
+    matchBrand(stationName) ??
+    matchBrand(senderTag) ??
+    matchBrand(courierCompany) ??
+    DEFAULT_STATION_ID
+  );
 }
 
 /**

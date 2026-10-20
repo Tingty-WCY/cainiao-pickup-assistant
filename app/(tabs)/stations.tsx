@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/state/AppContext';
 import { useStations } from '@/state/useStations';
@@ -14,6 +15,16 @@ import { theme } from '@/ui/theme';
 import { STATION_TYPE_LABELS, STATION_TYPE_OPTIONS } from '@/ui/labels';
 import { isFixedStation } from '@/db/seed';
 import type { Station, StationType } from '@/types';
+
+const stationLooks: Record<string, { color: string; soft: string; icon: React.ComponentProps<typeof Ionicons>['name']; mark: string }> = {
+  'station-jd': { color: '#D92D35', soft: '#FFF0F0', icon: 'cube-outline', mark: 'JD' },
+  'station-post': { color: '#23865B', soft: '#EAF7F0', icon: 'mail-outline', mark: '邮' },
+  'station-cainiao': { color: '#E88216', soft: '#FFF4E5', icon: 'leaf-outline', mark: '菜' },
+  'station-jinlinbao': { color: '#5375C8', soft: '#EEF2FF', icon: 'grid-outline', mark: '邻' },
+  'station-sf': { color: '#D94A36', soft: '#FFF0EC', icon: 'paper-plane-outline', mark: 'SF' },
+  'station-deppon': { color: '#4775B8', soft: '#EEF5FF', icon: 'cube-outline', mark: '德' },
+};
+const customLook = { color: '#7B61A8', soft: '#F4EFFA', icon: 'location-outline' as const, mark: '站' };
 
 interface Draft {
   id?: string;
@@ -68,58 +79,48 @@ export default function StationsScreen() {
           <EmptyState text="还没有驿站（预置驿站会在启动时自动写入）" />
         ) : (
           list.map((s) => (
-            <View
-              key={s.id}
-              style={{
-                backgroundColor: theme.card,
-                borderRadius: theme.radius,
-                padding: 14,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text }}>{s.name}</Text>
-                  {isFixedStation(s.id) ? (
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: theme.sub,
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                        borderRadius: 4,
-                        paddingHorizontal: 5,
-                        paddingVertical: 1,
-                      }}
-                    >
-                      预置
-                    </Text>
-                  ) : null}
+            (() => {
+              const look = stationLooks[s.id] ?? customLook;
+              return (
+                <View key={s.id} style={{ backgroundColor: theme.card, borderRadius: 18, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: look.soft }}>
+                  <View style={{ height: 5, backgroundColor: look.color }} />
+                  <View style={{ padding: 13 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: look.soft, alignItems: 'center', justifyContent: 'center', marginRight: 11 }}>
+                        <Ionicons name={look.icon} size={21} color={look.color} />
+                        <Text style={{ position: 'absolute', right: -3, bottom: -3, minWidth: 21, height: 19, textAlign: 'center', overflow: 'hidden', borderRadius: 8, backgroundColor: look.color, color: '#fff', fontSize: 9, fontWeight: '900', paddingHorizontal: 3, paddingTop: 2 }}>{look.mark}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 16, fontWeight: '800', color: theme.text }}>{s.name}</Text>
+                          {isFixedStation(s.id) ? <Text style={{ fontSize: 10, color: look.color, backgroundColor: look.soft, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>常用</Text> : null}
+                        </View>
+                        <Text style={{ fontSize: 12, color: theme.sub, marginTop: 3 }} numberOfLines={1}>
+                          {STATION_TYPE_LABELS[s.type]}{s.address ? ` · ${s.address}` : ''}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'center', minWidth: 52, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 12, backgroundColor: look.soft }}>
+                        <Text style={{ fontSize: 17, fontWeight: '900', color: look.color, lineHeight: 20 }}>{pendingCount(s.id)}</Text>
+                        <Text style={{ fontSize: 10, color: look.color }}>待取</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
+                      <Pressable style={[btn, { backgroundColor: look.soft, borderColor: look.soft }]} onPress={() => router.push(`/packages?focusStationId=${s.id}`)}>
+                        <Text style={[btnText, { color: look.color }]}>查看快递  ›</Text>
+                      </Pressable>
+                      <Pressable style={[btn, { flex: 0.65 }]} onPress={() => openEdit(s)}>
+                        <Text style={[btnText, { color: theme.sub }]}>编辑</Text>
+                      </Pressable>
+                      {isFixedStation(s.id) ? null : (
+                        <Pressable style={[btn, { flex: 0.65, borderColor: '#F3D9D8' }]} onPress={() => setConfirmId(s.id)}>
+                          <Text style={[btnText, { color: theme.danger }]}>删除</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
                 </View>
-                <Text style={{ fontSize: 12, color: theme.primary, fontWeight: '600' }}>
-                  待取 {pendingCount(s.id)} 件
-                </Text>
-              </View>
-              <Text style={{ fontSize: 13, color: theme.sub, marginTop: 4 }}>
-                {STATION_TYPE_LABELS[s.type]}
-                {s.address ? ` · ${s.address}` : ''}
-              </Text>
-              <View style={{ flexDirection: 'row', marginTop: 10, gap: 10 }}>
-                <Pressable style={btn} onPress={() => router.push(`/packages?focusStationId=${s.id}`)}>
-                  <Text style={btnText}>查看快递</Text>
-                </Pressable>
-                <Pressable style={btn} onPress={() => openEdit(s)}>
-                  <Text style={btnText}>编辑</Text>
-                </Pressable>
-                {isFixedStation(s.id) ? null : (
-                  <Pressable style={[btn, { borderColor: theme.danger }]} onPress={() => setConfirmId(s.id)}>
-                    <Text style={[btnText, { color: theme.danger }]}>删除</Text>
-                  </Pressable>
-                )}
-              </View>
-            </View>
+              );
+            })()
           ))
         )}
       </ScrollView>

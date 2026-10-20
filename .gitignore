@@ -36,5 +36,4 @@ yarn-error.*
 .DS_Store
 Thumbs.db
 
-# ---- 本地工作目录（项目记忆等）----
-.workbuddy/
+# ---- WorkBuddy 开发记录需要随私有仓库备份，因此不忽略 .workbuddy/ ----

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import { useApp } from '@/state/AppContext';
 import { useStations } from '@/state/useStations';
@@ -10,7 +11,7 @@ import { FormModal } from '@/ui/FormModal';
 import { LoadingState } from '@/ui/LoadingState';
 import { theme } from '@/ui/theme';
 import { nowISO } from '@/utils';
-import type { Package, Station } from '@/types';
+import type { CreatePackageInput, Package, Station } from '@/types';
 
 /** 导出/导入的数据包。老版本 JSON 里还有 accounts 字段，导入时直接忽略（向后兼容）。 */
 interface Dump {
@@ -19,10 +20,32 @@ interface Dump {
   exportedAt: string;
 }
 
+function parseDump(raw: string): Dump {
+  const value: unknown = JSON.parse(raw);
+  if (!value || typeof value !== 'object') throw new Error('JSON 内容不是有效的数据对象');
+  const candidate = value as Partial<Dump>;
+  if (!Array.isArray(candidate.stations) || !Array.isArray(candidate.packages)) {
+    throw new Error('未找到 stations 或 packages 数组，请选择应用导出的 JSON 文件');
+  }
+  if (!candidate.stations.every((s) => s && typeof s.id === 'string' && typeof s.name === 'string')) {
+    throw new Error('驿站数据格式不完整');
+  }
+  if (!candidate.packages.every((p) => p && typeof p.id === 'string' && typeof p.courierCompany === 'string' && typeof p.status === 'string')) {
+    throw new Error('快递数据格式不完整');
+  }
+  return candidate as Dump;
+}
+
+function duplicateKey(pkg: Pick<Package, 'id' | 'stationId' | 'courierCompany' | 'trackingNumber' | 'pickupCode'>): string {
+  if (pkg.trackingNumber?.trim()) return `tracking:${pkg.trackingNumber.trim().toLowerCase()}`;
+  if (!pkg.pickupCode?.trim()) return `id:${pkg.id}`;
+  return `code:${pkg.stationId ?? ''}:${pkg.courierCompany.trim().toLowerCase()}:${pkg.pickupCode?.trim().toLowerCase() ?? ''}`;
+}
+
 export default function SettingsScreen() {
   const { ready, showSensitive, setShowSensitive, db, requestRefresh } = useApp();
   const { list: stations, create: createStation } = useStations();
-  const { list: packages, create: createPackage } = usePackages();
+  const { list: packages } = usePackages();
   const [busy, setBusy] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
@@ -71,26 +94,75 @@ export default function SettingsScreen() {
     }
   };
 
-  const importData = async () => {
+  const previewImport = (dump: Dump) => {
+    const existingStations = new Set(stations.map((s) => s.name.trim().toLowerCase()));
+    const newStations = dump.stations.filter((s) => !existingStations.has(s.name.trim().toLowerCase())).length;
+    const keys = new Set(packages.map(duplicateKey));
+    let duplicates = 0;
+    for (const pkg of dump.packages) {
+      const oldStationName = dump.stations.find((s) => s.id === pkg.stationId)?.name.trim().toLowerCase() ?? '';
+      const mappedStation = stations.find((s) => s.name.trim().toLowerCase() === oldStationName);
+      const key = duplicateKey({ ...pkg, stationId: mappedStation?.id ?? pkg.stationId });
+      if (keys.has(key)) duplicates += 1;
+      else keys.add(key);
+    }
+    const importCount = dump.packages.length - duplicates;
+    Alert.alert(
+      '确认导入历史快递',
+      `文件包含 ${dump.packages.length} 条快递、${dump.stations.length} 个驿站。\n预计新增 ${importCount} 条快递，跳过 ${duplicates} 条重复记录，新增 ${newStations} 个驿站。\n原到站和取件时间将保留。`,
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '开始导入', onPress: () => void importData(dump) },
+      ],
+    );
+  };
+
+  const pickImportFile = async () => {
     try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/json', 'text/json', 'public.json'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset.name.toLowerCase().endsWith('.json')) throw new Error('请选择 .json 文件');
+      const raw = await FileSystem.readAsStringAsync(asset.uri);
+      previewImport(parseDump(raw));
+    } catch (e) {
+      Alert.alert('读取失败', e instanceof Error ? e.message : '无法读取 JSON 文件');
+    }
+  };
+
+  const importData = async (dump: Dump) => {
+    try {
+      if (!db) throw new Error('本地数据库尚未准备好');
       setBusy(true);
-      const data = JSON.parse(importText) as Partial<Dump>;
-      if (!Array.isArray(data.stations) || !Array.isArray(data.packages)) {
-        throw new Error('文件格式不正确');
-      }
       const stMap = new Map<string, string>();
-      for (const s of data.stations) {
-        const ns = await createStation({
-          name: s.name,
-          type: s.type,
-          address: s.address,
-          phone: s.phone,
-        });
-        stMap.set(s.id, ns.id);
+      const knownStations = [...stations];
+      for (const s of dump.stations) {
+        const matched = knownStations.find((existing) => existing.id === s.id)
+          ?? knownStations.find((existing) => existing.name.trim().toLowerCase() === s.name.trim().toLowerCase());
+        if (matched) {
+          stMap.set(s.id, matched.id);
+        } else {
+          const created = await createStation({ name: s.name, type: s.type, address: s.address, phone: s.phone });
+          stMap.set(s.id, created.id);
+          knownStations.push(created);
+        }
       }
-      for (const p of data.packages) {
-        await createPackage({
-          stationId: p.stationId ? stMap.get(p.stationId) : undefined,
+      const knownKeys = new Set(packages.map(duplicateKey));
+      let imported = 0;
+      let skipped = 0;
+      for (const p of dump.packages) {
+        const stationId = p.stationId ? stMap.get(p.stationId) : undefined;
+        const key = duplicateKey({ ...p, stationId });
+        if (knownKeys.has(key)) {
+          skipped += 1;
+          continue;
+        }
+        const input: CreatePackageInput = {
+          stationId,
           source: p.source,
           courierCompany: p.courierCompany,
           trackingNumber: p.trackingNumber,
@@ -100,11 +172,18 @@ export default function SettingsScreen() {
           status: p.status,
           arrivedAt: p.arrivedAt,
           remark: p.remark,
-        });
+        };
+        const created = await db.createPackage(input);
+        if (p.pickedUpAt) {
+          await db.updatePackage(created.id, { pickedUpAt: p.pickedUpAt });
+        }
+        knownKeys.add(key);
+        imported += 1;
       }
+      requestRefresh();
       setImportOpen(false);
       setImportText('');
-      Alert.alert('导入完成', '数据已恢复到本地');
+      Alert.alert('导入完成', `新增 ${imported} 条快递，跳过 ${skipped} 条重复记录。`);
     } catch (e) {
       Alert.alert('导入失败', e instanceof Error ? e.message : '未知错误');
     } finally {
@@ -136,8 +215,11 @@ export default function SettingsScreen() {
           <Pressable style={rowPress} onPress={exportData} disabled={busy}>
             <Text style={rowTitle}>导出数据（JSON）</Text>
           </Pressable>
+          <Pressable style={rowPress} onPress={() => void pickImportFile()} disabled={busy}>
+            <Text style={rowTitle}>选择 JSON 文件导入历史快递</Text>
+          </Pressable>
           <Pressable style={rowPress} onPress={() => setImportOpen(true)} disabled={busy}>
-            <Text style={rowTitle}>导入数据（从导出 JSON 恢复）</Text>
+            <Text style={rowTitle}>粘贴 JSON（兼容旧方式）</Text>
           </Pressable>
         </Section>
 
@@ -155,7 +237,7 @@ export default function SettingsScreen() {
 
       <FormModal visible={importOpen} title="导入数据" onClose={() => setImportOpen(false)}>
         <Text style={{ fontSize: 13, color: theme.sub, marginBottom: 8 }}>
-          粘贴此前导出的 JSON 内容，导入将作为恢复（生成新记录，不影响现有数据）。
+          粘贴此前导出的 JSON 内容。系统会匹配同名驿站、跳过已存在快递，并保留到站和取件时间。
         </Text>
         <TextInput
           value={importText}
@@ -174,7 +256,9 @@ export default function SettingsScreen() {
             textAlignVertical: 'top',
           }}
         />
-        <Pressable style={saveBtn} onPress={importData} disabled={busy || !importText.trim()}>
+        <Pressable style={saveBtn} onPress={() => {
+          try { previewImport(parseDump(importText)); } catch (e) { Alert.alert('导入失败', e instanceof Error ? e.message : 'JSON 格式错误'); }
+        }} disabled={busy || !importText.trim()}>
           <Text style={{ color: '#fff', fontWeight: '700' }}>开始导入</Text>
         </Pressable>
       </FormModal>

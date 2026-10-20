@@ -27,12 +27,13 @@ interface Props {
   visible: boolean;
   title: string;
   submitLabel: string;
+  compact?: boolean;
   initial?: Package;
   onClose: () => void;
   onSubmit: (values: PackageFormValues) => Promise<void> | void;
 }
 
-export function PackageForm({ visible, title, submitLabel, initial, onClose, onSubmit }: Props) {
+export function PackageForm({ visible, title, submitLabel, initial, onClose, onSubmit, compact = false }: Props) {
   const { list: stations } = useStations();
   const [stationId, setStationId] = useState(initial?.stationId ?? '');
   const [courier, setCourier] = useState(initial?.courierCompany ?? '');
@@ -72,43 +73,70 @@ export function PackageForm({ visible, title, submitLabel, initial, onClose, onS
     }
   };
 
+  const saveButton = (
+    <Pressable style={[saveBtn, busy && { opacity: 0.6 }, compact && compactSaveBtn]} onPress={submit} disabled={busy}>
+      <Text style={{ color: '#fff', fontWeight: '800', fontSize: compact ? 15 : 14 }}>{busy ? '保存中…' : submitLabel}</Text>
+    </Pressable>
+  );
+
   return (
-    <FormModal visible={visible} title={title} onClose={onClose}>
-      <FormField
-        label="快递公司（可留空）"
-        value={courier}
-        onChangeText={setCourier}
-        placeholder="留空自动填「未知」"
-      />
-      <FormField label="快递单号（可选）" value={tracking} onChangeText={setTracking} placeholder="单号" />
-      <FormField label="取件码（可选）" value={code} onChangeText={setCode} placeholder="如 528 / A238" />
-      <FormField
-        label="快递尾号（可选）"
-        value={tail}
-        onChangeText={setTail}
-        placeholder="如 5624，出库要报尾号时填"
-      />
-      <FormField
-        label="柜号/格口（可选）"
-        value={box}
-        onChangeText={setBox}
-        placeholder="如 B-15，外卖柜/智能柜填"
-      />
-      <FormField label="备注（可选）" value={remark} onChangeText={setRemark} placeholder="备注" />
-
-      <Pressable style={selectRow} onPress={() => setPicker('station')}>
-        <Text style={selectLabel}>驿站（可选）</Text>
-        <Text style={selectValue}>{station ? station.name : '请选择'}</Text>
-      </Pressable>
-      <Pressable style={selectRow} onPress={() => setPicker('status')}>
-        <Text style={selectLabel}>状态</Text>
-        <Text style={selectValue}>{STATUS_LABELS[status]}</Text>
-      </Pressable>
-
-      {error ? <Text style={{ color: theme.danger, fontSize: 13, marginBottom: 8 }}>{error}</Text> : null}
-      <Pressable style={[saveBtn, busy && { opacity: 0.6 }]} onPress={submit} disabled={busy}>
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{submitLabel}</Text>
-      </Pressable>
+    <FormModal
+      visible={visible}
+      title={title}
+      onClose={onClose}
+      compact={compact}
+      footer={compact ? (
+        <View style={{ paddingTop: 7, backgroundColor: theme.card }}>
+          {error ? <Text style={{ color: theme.danger, fontSize: 12, marginBottom: 6 }}>{error}</Text> : null}
+          {saveButton}
+        </View>
+      ) : undefined}
+    >
+      {compact ? (
+        <View style={{ gap: 1 }}>
+          <View style={compactRow}>
+            <View style={compactCell}><FormField compact label="快递公司" value={courier} onChangeText={setCourier} placeholder="未知" /></View>
+            <View style={compactCell}><FormField compact label="取件码" value={code} onChangeText={setCode} placeholder="如 528 / A238" /></View>
+          </View>
+          <View style={compactRow}>
+            <View style={compactCell}><FormField compact label="快递单号" value={tracking} onChangeText={setTracking} placeholder="可选" /></View>
+            <View style={compactCell}><FormField compact label="快递尾号" value={tail} onChangeText={setTail} placeholder="如 5624" /></View>
+          </View>
+          <View style={compactRow}>
+            <View style={compactCell}><FormField compact label="柜号 / 格口" value={box} onChangeText={setBox} placeholder="如 B-15" /></View>
+            <View style={compactCell}><FormField compact label="备注" value={remark} onChangeText={setRemark} placeholder="可选" /></View>
+          </View>
+          <View style={compactRow}>
+            <Pressable style={compactSelect} onPress={() => setPicker('station')}>
+              <Text style={compactSelectLabel}>驿站</Text>
+              <Text style={compactSelectValue} numberOfLines={1}>{station ? station.name : '不指定'}</Text>
+            </Pressable>
+            <Pressable style={compactSelect} onPress={() => setPicker('status')}>
+              <Text style={compactSelectLabel}>状态</Text>
+              <Text style={compactSelectValue}>{STATUS_LABELS[status]}</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          <FormField label="快递公司（可留空）" value={courier} onChangeText={setCourier} placeholder="留空自动填「未知」" />
+          <FormField label="快递单号（可选）" value={tracking} onChangeText={setTracking} placeholder="单号" />
+          <FormField label="取件码（可选）" value={code} onChangeText={setCode} placeholder="如 528 / A238" />
+          <FormField label="快递尾号（可选）" value={tail} onChangeText={setTail} placeholder="如 5624，出库要报尾号时填" />
+          <FormField label="柜号/格口（可选）" value={box} onChangeText={setBox} placeholder="如 B-15，外卖柜/智能柜填" />
+          <FormField label="备注（可选）" value={remark} onChangeText={setRemark} placeholder="备注" />
+          <Pressable style={selectRow} onPress={() => setPicker('station')}>
+            <Text style={selectLabel}>驿站（可选）</Text>
+            <Text style={selectValue}>{station ? station.name : '请选择'}</Text>
+          </Pressable>
+          <Pressable style={selectRow} onPress={() => setPicker('status')}>
+            <Text style={selectLabel}>状态</Text>
+            <Text style={selectValue}>{STATUS_LABELS[status]}</Text>
+          </Pressable>
+          {error ? <Text style={{ color: theme.danger, fontSize: 13, marginBottom: 8 }}>{error}</Text> : null}
+          {saveButton}
+        </>
+      )}
 
       <ActionSheet
         visible={picker === 'station'}
@@ -141,3 +169,20 @@ const saveBtn: View['props']['style'] = {
   alignItems: 'center',
   marginTop: 4,
 };
+const compactRow: View['props']['style'] = { flexDirection: 'row', gap: 10 };
+const compactCell: View['props']['style'] = { flex: 1, minWidth: 0 };
+const compactSelect: View['props']['style'] = {
+  flex: 1,
+  minWidth: 0,
+  minHeight: 52,
+  borderWidth: 1,
+  borderColor: theme.border,
+  borderRadius: 9,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  marginBottom: 8,
+  justifyContent: 'center',
+};
+const compactSelectLabel: Text['props']['style'] = { fontSize: 10, color: theme.sub, marginBottom: 2 };
+const compactSelectValue: Text['props']['style'] = { fontSize: 13, color: theme.text, fontWeight: '700' };
+const compactSaveBtn: View['props']['style'] = { minHeight: 46, marginTop: 0, paddingVertical: 11 };

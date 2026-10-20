@@ -9,7 +9,9 @@ export default function RootLayout() {
         <Stack.Screen name="add" options={{ presentation: 'modal', title: '添加快递' }} />
         <Stack.Screen name="edit" options={{ presentation: 'modal', title: '编辑快递' }} />
         <Stack.Screen name="import" options={{ presentation: 'modal', title: '导入物流信息' }} />
+        <Stack.Screen name="stats" options={{ headerShown: false }} />
       </Stack>
     </AppProvider>
   );
 }
+

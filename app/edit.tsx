@@ -62,6 +62,7 @@ export default function EditScreen() {
     <PackageForm
       key={id}
       visible
+      compact
       title="编辑快递"
       submitLabel="保存"
       initial={pkg}

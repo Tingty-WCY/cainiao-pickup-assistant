@@ -119,10 +119,7 @@ tests/                        vitest，纯 Node 可跑，**唯一可靠的回归
 .workbuddy/memory/*.md        完整开发日志（按日期，含每次决策的来龙去脉）。
                               **未纳入 git**（.gitignore 排除了），只在本地存在。
                               遇到「为什么当初这么设计」的问题，去翻这里，答案通常在里面。
-lib/  pubspec.yaml  analysis_options.yaml
-                              ⚠️ 早期 Flutter 版残留（52 个 .dart），**已废弃，不属于本项目**。
-                              不要照着它改，不要因为看到 dart 文件就以为是 Flutter 项目，
-                              可以直接删（删前跟用户确认）。
+早期 Flutter 源码（lib/、pubspec.yaml、analysis_options.yaml）已清理，当前唯一维护项目为 Expo / React Native。
 ```
 
 ## 4. 命令
@@ -199,8 +196,7 @@ npm start                   # = npx expo start，扫码用 Expo Go 打开
 ## 9. 下一步候选（按性价比）
 
 1. **真机走查**：按 `QA验证清单.md` 逐项过，把 UI 上实际不顺的地方改掉（最高优先）。
-2. **清理废弃代码**：删 `lib/`、`pubspec.yaml`、`analysis_options.yaml`（早期 Flutter 残留），
-   README 里对应描述一起改。注意 `app/(tabs)/accounts.tsx` **不是**残留，别删。
+2. **清理废弃代码**：已完成，早期 Flutter 源码与 Dart 配置已移除。注意 `app/(tabs)/accounts.tsx` **不是**残留，别删。
 3. **首页体验**：待取数量大时按驿站折叠、常用驿站置顶、长按快捷操作。
 4. **剪贴板监听**：`expo-clipboard` 已有，进前台时读一次剪贴板，命中短信特征就提示「发现取件码，要导入吗」。
 5. **取件提醒**：本地通知（`expo-notifications`），到站/到期提醒。

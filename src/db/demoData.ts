@@ -93,12 +93,14 @@ export async function loadDemoData(db: DbClient): Promise<DemoLoadResult> {
       courierCompany: '韵达',
       pickupCode: '3-4021',
       status: 'PICKED_UP',
+      arrivedAt: t,
       remark: `${DEMO_MARK}已取件`,
     },
   ];
 
   for (const row of rows) {
-    await db.createPackage(row);
+    const created = await db.createPackage(row);
+    if (row.status === 'PICKED_UP') await db.markAsPickedUp(created.id);
   }
 
   return { loaded: true, counts: { packages: rows.length } };

@@ -127,7 +127,7 @@ export function PackageCard({
           style={{
             backgroundColor: theme.card,
             borderRadius: theme.radius,
-            padding: 10,
+            padding: 8,
             borderWidth: selected ? 2 : 1,
             borderColor: selected ? theme.primary : theme.border,
           }}
@@ -147,28 +147,30 @@ export function PackageCard({
               />
             ) : null}
 
-            {/* 取件码：最醒目，固定宽度方便竖着扫 */}
+            {/* 保持独立取件码牌，稍微加宽以容纳近邻宝长码 */}
             <View
               style={{
-                width: 86,
+                width: 132,
                 backgroundColor: theme.primarySoft,
                 borderRadius: 10,
-                paddingVertical: 6,
-                paddingHorizontal: 4,
+                paddingVertical: 8,
+                paddingHorizontal: 7,
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                minHeight: 70,
               }}
             >
               <Text style={{ fontSize: 10, color: theme.sub }}>取件码</Text>
               <Text
-                style={{ fontSize: 20, fontWeight: '800', color: theme.primary }}
+                style={{ fontSize: 22, fontWeight: '900', color: theme.primary, letterSpacing: 0.2, maxWidth: '100%' }}
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
                 {pkg.pickupCode ?? '—'}
               </Text>
               {extras ? (
-                <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary, marginTop: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary, marginTop: 2 }} numberOfLines={1}>
                   {extras}
                 </Text>
               ) : null}
@@ -201,47 +203,28 @@ export function PackageCard({
             </View>
           </Pressable>
 
-          {/* 操作区：图标按钮，尽量不占高度 */}
           {!selectMode ? (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: 4,
-                gap: 16,
-              }}
-            >
-              <IconAction
-                icon={copied ? 'checkmark' : 'copy-outline'}
-                label={copied ? '已复制' : '复制'}
-                color={copied ? theme.success : theme.sub}
-                onPress={copy}
-              />
-              {onPickedUp && pkg.status !== 'PICKED_UP' ? (
-                <IconAction
-                  icon="checkmark-done-outline"
-                  label="已取"
-                  color={theme.success}
-                  onPress={() => setConfirmPicked(true)}
-                />
-              ) : null}
-              {onEdit ? (
-                <IconAction
-                  icon="create-outline"
-                  label="编辑"
-                  color={theme.sub}
-                  onPress={() => onEdit(pkg.id)}
-                />
-              ) : null}
-              {onDelete ? (
-                <IconAction
-                  icon="trash-outline"
-                  label="删除"
-                  color={theme.danger}
-                  onPress={() => setConfirmDelete(true)}
-                />
-              ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 7, gap: 7 }}>
+                <Pressable onPress={copy} accessibilityRole="button" accessibilityLabel="复制取件码" style={{ flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: copied ? theme.success : theme.border, backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Ionicons name={copied ? 'checkmark-circle' : 'copy-outline'} size={19} color={copied ? theme.success : theme.primary} />
+                  <Text style={{ color: copied ? theme.success : theme.text, fontSize: 13, fontWeight: '700' }}>{copied ? '已复制' : '复制取件码'}</Text>
+                </Pressable>
+                {onPickedUp && pkg.status !== 'PICKED_UP' ? (
+                  <Pressable onPress={() => setConfirmPicked(true)} accessibilityRole="button" accessibilityLabel="标记已取" style={{ flex: 1, minHeight: 42, borderRadius: 9, backgroundColor: theme.success, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <Ionicons name="checkmark-done" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>已取</Text>
+                  </Pressable>
+                ) : pkg.status === 'PICKED_UP' ? (
+                  <View style={{ flex: 1, minHeight: 42, borderRadius: 9, backgroundColor: '#EAF5EE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Ionicons name="checkmark-circle" size={19} color={theme.success} />
+                    <Text style={{ color: theme.success, fontSize: 14, fontWeight: '800' }}>已取件</Text>
+                  </View>
+                ) : null}
+                {onEdit ? (
+                  <Pressable onPress={() => onEdit(pkg.id)} accessibilityRole="button" accessibilityLabel="编辑快递" style={{ width: 42, height: 42, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F3F6' }}>
+                    <Ionicons name="create-outline" size={19} color={theme.sub} />
+                  </Pressable>
+                ) : null}
             </View>
           ) : null}
         </View>
@@ -276,21 +259,4 @@ export function PackageCard({
   );
 }
 
-function IconAction({
-  icon,
-  label,
-  color,
-  onPress,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  color: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-      <Ionicons name={icon} size={15} color={color} />
-      <Text style={{ fontSize: 12, color }}>{label}</Text>
-    </Pressable>
-  );
-}
+

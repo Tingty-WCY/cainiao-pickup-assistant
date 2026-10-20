@@ -7,10 +7,12 @@ interface Props {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  footer?: React.ReactNode;
+  compact?: boolean;
 }
 
 /** 通用底部表单弹窗（替代 react-native 原生 Modal 样板）。 */
-export function FormModal({ visible, title, onClose, children }: Props) {
+export function FormModal({ visible, title, onClose, children, footer, compact }: Props) {
   if (!visible) return null;
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
@@ -20,9 +22,9 @@ export function FormModal({ visible, title, onClose, children }: Props) {
             backgroundColor: theme.card,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            padding: 16,
-            paddingBottom: 28,
-            maxHeight: '90%',
+            padding: compact ? 13 : 16,
+            paddingBottom: compact ? 12 : 28,
+            maxHeight: compact ? '94%' : '90%',
           }}
         >
           <View
@@ -30,7 +32,7 @@ export function FormModal({ visible, title, onClose, children }: Props) {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: 14,
+              marginBottom: compact ? 8 : 14,
             }}
           >
             <Text style={{ fontSize: 17, fontWeight: '700', color: theme.text }}>{title}</Text>
@@ -38,7 +40,14 @@ export function FormModal({ visible, title, onClose, children }: Props) {
               <Text style={{ color: theme.sub, fontSize: 15 }}>关闭</Text>
             </Pressable>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={!compact}
+            contentContainerStyle={compact ? { paddingBottom: 4 } : undefined}
+          >
+            {children}
+          </ScrollView>
+          {footer}
         </View>
       </View>
     </Modal>

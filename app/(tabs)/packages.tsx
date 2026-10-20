@@ -163,6 +163,27 @@ export default function PackagesScreen() {
           </Pressable>
         </ScrollView>
 
+        <Pressable
+          onPress={() => router.push('/stats')}
+          accessibilityRole="button"
+          accessibilityLabel="查看取件统计"
+          style={({ pressed }) => ({
+            alignSelf: 'flex-end',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            marginTop: 8,
+            paddingHorizontal: 10,
+            minHeight: 30,
+            borderRadius: 9,
+            backgroundColor: '#F0EFFF',
+            opacity: pressed ? 0.75 : 1,
+          })}
+        >
+          <Text style={{ color: '#6A72B8', fontWeight: '700', fontSize: 12 }}>查看取件统计</Text>
+          <Text style={{ color: '#6A72B8', fontSize: 13 }}>›</Text>
+        </Pressable>
+
         {focusId && stationMap.get(focusId) ? (
           <View
             style={{
